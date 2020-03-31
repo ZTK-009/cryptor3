@@ -1,0 +1,134 @@
+#!/bin/python3
+import threading
+from tkinter import scrolledtext
+import os 
+import pyAesCrypt
+import threading
+import time
+from tkinter import ttk
+from tkinter.ttk import Progressbar
+from tkinter import filedialog
+import tkinter 
+from tkinter import *
+from tkinter import messagebox
+from tkinter.ttk import Combobox
+import sys
+import os
+import random
+from os import sys
+bufferSize = 900*1024
+def create_window():
+ global window,combobox,combobox2,text_field
+ window=Tk()
+ window.title("Cryptor V1.2 by Zert")
+ window.geometry('500x350')
+ #window.config(bg='black') 
+ lbl = Label(window, text="Choose an option", font=("Arial Bold Italic", 10))
+ lbl.place(x=213,y=1)
+ combobox = Combobox(window,width=25)  
+ combobox['values'] = ("Encrypt","Decrypt")
+ combobox.current(0)
+ combobox.place(x=150,y=20)
+ combobox2 = Combobox(window,width=25)  
+ combobox2['values'] = ("File","Directory")
+ combobox2.current(0)
+ combobox2.place(x=150,y=70)
+ btn = Button(window, text="Start",command=start)
+ btn.place(x=230,y=100)
+ text_field=scrolledtext.ScrolledText(window, width=25, height=10,wrap=WORD,fg='green')  
+ text_field.place(x=150,y=150)
+ window.resizable(False,False)
+ window.mainloop()
+def generate_password():
+ pas=""
+ sym=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y''z','1','2','3','4','5','6','7','8','9','0','!','@','#']
+ for i in range(0,20):
+  pas+=random.choice(sym)
+ change_text('Password was generated:{}'.format(pas)); change_text('\nStarting encryption...')
+ return pas
+def start():
+ global file_path,password
+ change_text("Starting...")
+ if combobox.get() =="Encrypt":
+  password=generate_password()
+  if combobox2.get()=="File":
+   file_path = filedialog.askopenfilename(title="Select file to encrypt",filetypes = (('Txt file for default',"*.txt"),("all files","*.*")))
+   if file_path != "":
+    crypt(file_path)
+    change_text('\nFile {} was encrypted'.format(file_path))
+   else:
+    messagebox.showerror("Error","Empty path to file")
+  else:
+   dir_path=filedialog.askdirectory()
+   if dir_path!="":
+    t=threading.Thread(target=find,args=(dir_path,'encrypt'))
+    t.start()
+   else:
+    messagebox.showerror("Error","Empty path to directory")
+  ask_to_save_key()
+ elif combobox.get()=="Decrypt":
+  get_password()
+  if combobox2.get()=="File":
+   file_path =filedialog.askopenfilename(title="Select file to decrypt",filetypes = (('CRP Files',"*.crp"),("All Files","*.*")))
+   if file_path != "":
+    decrypt(file_path)
+    change_text("\nFile {} was decrypted".format(file_path))
+   else:
+    messagebox.showerror("Error","Empty path to file")
+  else:
+   dir_path=filedialog.askdirectory()
+   if dir_path!="": 
+    thread=threading.Thread(target=find,args=(dir_path,'decrypt'))
+    thread.start()
+   else:
+    messagebox.showerror("Error","Empty path to directory")
+def change_text(text):
+ text_field.insert(INSERT,text)
+def get_password():
+ key=filedialog.askopenfilename(title="Select file with key",filetypes = (('Txt file for default',"*.txt"),("All files","*.*")))
+ if key!="":
+  with open(key,'r') as p:
+   password=p.read()
+ else:
+  messagebox.showerror("Error",'Empty path to file with key') 
+def ask_to_save_key():
+ choice=messagebox.askyesno("Save key",'Do you want to save key?')
+ if choice ==True:
+  path_to_key=filedialog.asksaveasfilename(initialdir = "/",title = "Save key",filetypes = (('Txt file for default',"*.txt"),("All Files","*.*")))
+  save_key(path_to_key)  
+def main():
+ create_window()
+def save_key(path):
+ with open(path,'w') as c:
+  c.write(password)
+  change_text("\nKey was saved in {}".format(path))
+def find(dir,stv):
+ if stv == "encrypt":
+  for name in os.listdir(dir):
+   if os.path.isfile(os.path.join(dir,name)):
+    try:
+     change_text('\nEncrypting:'+os.path.join(dir,name))
+     crypt(os.path.join(dir,name))
+    except:
+     continue
+   else:
+    if os.path.isdir(os.path.join(dir,name)):
+     find(os.path.join(dir,name),'encrypt')
+ else:
+  for name in os.listdir(dir):
+   if os.path.isfile(os.path.join(dir,name)):
+    try:
+     change_text('\nDecrypting:'+os.path.join(dir,name))
+     decrypt(os.path.join(dir,name))
+    except:
+     continue
+   else :
+    if os.path.isdir(os.path.join(dir,name)):
+     find(os.path.join(dir,name),'decrypt')
+def crypt(path):
+ pyAesCrypt.encryptFile(path,path+".crp",password,bufferSize)
+ os.remove(path)
+def decrypt(path): 
+ pyAesCrypt.decryptFile(path,path[:-4],password,bufferSize)
+ os.remove(path)
+main()
